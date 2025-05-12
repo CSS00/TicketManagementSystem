@@ -8,22 +8,26 @@ namespace TicketManagementSystem.Models
 
     public class Ticket
     {
-        public Guid Id { get; set; }
+        public Guid? Id { get; set; }
         public Guid EventId { get; set; }
         public decimal Price { get; set; }
-        public Seat Seat { get; set; }
+        public string Section { get; set; }
+        public string Row { get; set; }
+        public string SeatNumber { get; set; }
         public Status Status { get; set; } = Status.Available;
         public DateTime CreatedAt { get; set; }
         public DateTime? ReservedUntil { get; set; }
         public Guid? ReservedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
-        public Ticket(Guid eventId, decimal price, Seat seat)
+        public Ticket(Guid eventId, decimal price, string section, string row, string seatNumber)
         {
             Id = Guid.NewGuid();
             EventId = eventId;
             Price = price;
-            Seat = seat;
+            Section = section;
+            Row = row;
+            SeatNumber = seatNumber;
             Status = Status.Available;
             CreatedAt = DateTime.UtcNow;
         }
