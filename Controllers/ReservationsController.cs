@@ -28,8 +28,8 @@ namespace TicketManagementSystem.Controllers
         }
 
         // Get reservation details by ID
-        [HttpPost("{id}/details")]
-        public async Task<ActionResult<ReservationDetails>> GetReservationAsync([FromRoute] Guid id, [FromBody] Guid userId)
+        [HttpGet("/api/users/{userId}/reservations/{id}")]
+        public async Task<ActionResult<ReservationDetails>> GetReservationAsync([FromRoute] Guid userId, [FromRoute] Guid id)
         {
             if (id == Guid.Empty)
             {
@@ -55,6 +55,42 @@ namespace TicketManagementSystem.Controllers
             ReservationDetails details = new ReservationDetails(reservation, tickets);
 
             return Ok(details);
+        }
+
+        // Get all reservations of a user
+        [HttpGet("/api/users/{userId}/reservations")]
+        public async Task<ActionResult<List<ReservationDetails>>> GetUserReservationsAsync([FromRoute] Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            var reservations = _reservationContext.Reservations
+                .Where(r => r.UserId == userId)
+                .ToList<Reservation>();
+
+            if (reservations == null || reservations.Count == 0)
+            {
+                return NotFound("No reservations found for the user.");
+            }
+
+            var reservationDetailsList = new List<ReservationDetails>();
+            foreach (var reservation in reservations)
+            {
+                var tickets = _ticketContext.Tickets
+                    .Where(t => reservation.TicketIds.Contains((Guid)t.Id))
+                    .ToList();
+
+                if (tickets.Count != reservation.TicketIds.Count)
+                {
+                    return Problem("Some tickets in the reservation are not found.");
+                }
+
+                reservationDetailsList.Add(new ReservationDetails(reservation, tickets));
+            }
+
+            return Ok(reservationDetailsList);
         }
 
         // Reserve a list of tickets and return a reservation object
@@ -251,6 +287,15 @@ namespace TicketManagementSystem.Controllers
                     }
                 }
             }
+        }
+    }
+
+    public class GetReservationRequest
+    {
+        public Guid UserId { get; set; }
+        public GetReservationRequest(Guid userId)
+        {
+            UserId = userId;
         }
     }
 
