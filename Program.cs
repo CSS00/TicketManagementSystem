@@ -6,7 +6,6 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using TicketManagementSystem.Middlewares;
 using TicketManagementSystem.Models;
 
 var builder = WebApplication.CreateBuilder(args);
