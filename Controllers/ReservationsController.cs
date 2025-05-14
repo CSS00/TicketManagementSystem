@@ -89,14 +89,12 @@ namespace TicketManagementSystem.Controllers
                 return BadRequest("Invalid user ID.");
             }
 
-            var reservations = _reservationContext.Reservations
+            var reservations = new List<Reservation>();
+            reservations.AddRange(
+                _reservationContext.Reservations
                 .Where(r => r.UserId == userGuid)
-                .ToList<Reservation>();
-
-            if (reservations == null || reservations.Count == 0)
-            {
-                return NotFound("No reservations found for the user.");
-            }
+                .ToList<Reservation>()
+            );
 
             var reservationDetailsList = new List<ReservationDetails>();
             foreach (var reservation in reservations)
