@@ -10,4 +10,9 @@ public class EventContext : DbContext
     }
 
     public DbSet<Event> Events { get; set; } = null!;
+
+    public bool EventExists(Guid? id)
+    {
+        return this.Events.Any(e => e.Id == id);
+    }
 }

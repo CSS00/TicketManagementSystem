@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using TicketManagementSystem.Middlewares;
 using TicketManagementSystem.Models;
@@ -12,11 +13,14 @@ builder.Services.AddDbContext<EventContext>(opt =>
     opt.UseInMemoryDatabase("Event"));
 builder.Services.AddDbContext<TicketContext>(opt =>
     opt.UseInMemoryDatabase("Ticket"));
+builder.Services.AddDbContext<ReservationContext>(opt =>
+    opt.UseInMemoryDatabase("Reservation"));
 
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
         options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+        options.SerializerSettings.Converters.Add(new StringEnumConverter());
     });
 
 var app = builder.Build();
@@ -36,7 +40,7 @@ app.Use((context, next) =>
     return next();
 });
 app.UseHttpsRedirection();
-app.UseMiddleware<LoggingMiddleware>();
+// app.UseMiddleware<LoggingMiddleware>();
 app.MapControllers();
 app.Run();
 

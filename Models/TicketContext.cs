@@ -10,4 +10,9 @@ public class TicketContext : DbContext
     }
 
     public DbSet<Ticket> Tickets { get; set; } = null!;
+
+    public bool TicketExists(Guid? id)
+    {
+        return this.Tickets.Any(e => e.Id == id);
+    }
 }
