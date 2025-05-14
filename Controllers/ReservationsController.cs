@@ -286,7 +286,7 @@ namespace TicketManagementSystem.Controllers
             return Ok("Reservation canceled successfully.");
         }
 
-        public async Task<bool> IsTicketAvailableForReserve(Ticket ticket, Guid userId)
+        private async Task<bool> IsTicketAvailableForReserve(Ticket ticket, Guid userId)
         {
             // ticket is not found
             if (ticket == null)

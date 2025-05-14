@@ -167,7 +167,7 @@ namespace TicketManagementSystem.Controllers
             return Ok(ticket);
         }
 
-                // POST: api/Tickets -- Create an ticket
+        // POST: api/Tickets -- Create an ticket
         [HttpPost("tickets/batch")]
         [Authorize]
         public async Task<ActionResult<Ticket>> PostTickets(TicketBatch ticketBatch)
