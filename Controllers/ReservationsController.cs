@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using TicketManagementSystem.Models;
 using TicketManagementSystem.Services;
@@ -28,9 +30,22 @@ namespace TicketManagementSystem.Controllers
         }
 
         // Get reservation details by ID
-        [HttpGet("/api/users/{userId}/reservations/{id}")]
-        public async Task<ActionResult<ReservationDetails>> GetReservationAsync([FromRoute] Guid userId, [FromRoute] Guid id)
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<ActionResult<ReservationDetails>> GetReservationAsync([FromRoute] Guid id)
         {
+            var userId = (User.Identity as ClaimsIdentity)?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+
+            Guid userGuid = Guid.Parse(userId);
+            if (userGuid == Guid.Empty)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
             if (id == Guid.Empty)
             {
                 return BadRequest("Invalid reservation ID.");
@@ -41,9 +56,9 @@ namespace TicketManagementSystem.Controllers
             {
                 return NotFound($"Reservation {id} is not found.");
             }
-            if (reservation.UserId != userId)
+            if (reservation.UserId != userGuid)
             {
-                return BadRequest($"User does not have access to the reservation.");
+                return Unauthorized($"User does not have access to the reservation.");
             }
 
             List<Ticket> tickets = _ticketContext.Tickets.Where(t => reservation.TicketIds.Contains((Guid)t.Id)).ToList();
@@ -58,16 +73,24 @@ namespace TicketManagementSystem.Controllers
         }
 
         // Get all reservations of a user
-        [HttpGet("/api/users/{userId}/reservations")]
-        public async Task<ActionResult<List<ReservationDetails>>> GetUserReservationsAsync([FromRoute] Guid userId)
+        [HttpGet()]
+        [Authorize]
+        public async Task<ActionResult<List<ReservationDetails>>> GetUserReservationsAsync()
         {
-            if (userId == Guid.Empty)
+            var userId = (User.Identity as ClaimsIdentity)?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+            Guid userGuid = Guid.Parse(userId);
+
+            if (userGuid == Guid.Empty)
             {
                 return BadRequest("Invalid user ID.");
             }
 
             var reservations = _reservationContext.Reservations
-                .Where(r => r.UserId == userId)
+                .Where(r => r.UserId == userGuid)
                 .ToList<Reservation>();
 
             if (reservations == null || reservations.Count == 0)
@@ -95,8 +118,16 @@ namespace TicketManagementSystem.Controllers
 
         // Reserve a list of tickets and return a reservation object
         [HttpPost()]
+        [Authorize]
         public async Task<ActionResult<Reservation>> ReserveTicketsAsync([FromBody] CreateReservationRequest request)
         {
+            var userId = (User.Identity as ClaimsIdentity)?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+            Guid userGuid = Guid.Parse(userId);
+
             if (request.TicketIds == null || request.TicketIds.Count == 0)
             {
                 return BadRequest("Ticket IDs cannot be null or empty.");
@@ -116,7 +147,7 @@ namespace TicketManagementSystem.Controllers
                 {
                     return BadRequest($"Bad input! Tickets and event have to match.");
                 }
-                bool isAvailable = await IsTicketAvailableForReserve(ticket, request.UserId);
+                bool isAvailable = await IsTicketAvailableForReserve(ticket, userGuid);
                 if (!isAvailable)
                 {
                     return BadRequest($"Ticket {id} is not available.");
@@ -128,7 +159,7 @@ namespace TicketManagementSystem.Controllers
             }
 
             // if they are available, update them with the new reservation id and create the reservation & save
-            var reservation = new Reservation(request.EventId, request.UserId, request.TicketIds);
+            var reservation = new Reservation(request.EventId, userGuid, request.TicketIds);
             _reservationContext.Reservations.Add(reservation);
             tickets.ForEach(t => {t.ReservationId = reservation.Id;});
             await _ticketContext.SaveChangesAsync();
@@ -138,8 +169,16 @@ namespace TicketManagementSystem.Controllers
 
         // Confirm a reservation with reservation ID and payment information, and return a booking object
         [HttpPost("{id}/confirm")]
+        [Authorize]
         public async Task<ActionResult<Reservation>> ConfirmReservationAsync([FromRoute] Guid id, [FromBody] ConfirmReservationRequest request)
         {
+            var userId = (User.Identity as ClaimsIdentity)?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+            Guid userGuid = Guid.Parse(userId);
+
             if (request == null || id == Guid.Empty)
             {
                 return BadRequest("Invalid reservation confirmation request.");
@@ -151,9 +190,9 @@ namespace TicketManagementSystem.Controllers
                 return NotFound($"Reservation {id} is not found.");
             }
 
-            if (reservation.UserId != request.UserId)
+            if (reservation.UserId != userGuid)
             {
-                return BadRequest($"User does not have access to the reservation.");
+                return Unauthorized($"User does not have access to the reservation.");
             }
 
             if (reservation.Status == ReservationStatus.Confirmed)
@@ -197,8 +236,16 @@ namespace TicketManagementSystem.Controllers
 
         // Cancel a reservation with reservation ID
         [HttpPost("{id}/cancel")]
+        [Authorize]
         public async Task<ActionResult> CancelReservationAsync([FromRoute] Guid id)
         {
+            var userId = (User.Identity as ClaimsIdentity)?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Forbid();
+            }
+            Guid userGuid = Guid.Parse(userId);
+
             if (id == Guid.Empty)
             {
                 return BadRequest("Invalid reservation ID.");
@@ -208,6 +255,11 @@ namespace TicketManagementSystem.Controllers
             if (reservation == null)
             {
                 return NotFound($"Reservation {id} is not found.");
+            }
+
+            if (reservation.UserId != userGuid)
+            {
+                return Unauthorized($"User does not have access to the reservation.");
             }
 
             if (reservation.Status == ReservationStatus.Cancelled)
@@ -290,35 +342,22 @@ namespace TicketManagementSystem.Controllers
         }
     }
 
-    public class GetReservationRequest
-    {
-        public Guid UserId { get; set; }
-        public GetReservationRequest(Guid userId)
-        {
-            UserId = userId;
-        }
-    }
-
     public class CreateReservationRequest
     {
         public Guid EventId { get; set; }
-        public Guid UserId { get; set; }
         public List<Guid> TicketIds { get; set; }
-        public CreateReservationRequest(Guid eventId, Guid userId, List<Guid> ticketIds)
+        public CreateReservationRequest(Guid eventId, List<Guid> ticketIds)
         {
             EventId = eventId;
-            UserId = userId;
             TicketIds = ticketIds;
         }
     }
 
     public class ConfirmReservationRequest
     {
-        public Guid UserId { get; set; }
         public Payment PaymentInfo { get; set; }
         public ConfirmReservationRequest(Guid userId, Payment paymentInfo)
         {
-            UserId = userId;
             PaymentInfo = paymentInfo;
         }
     }

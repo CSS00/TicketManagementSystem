@@ -8,7 +8,6 @@ namespace TicketManagementSystem.Models
         public string Section { get; set; }
         public string Row { get; set; }
         public string SeatNumber { get; set; }
-        // public Status Status { get; set; } = Status.Available;
         public DateTime CreatedAt { get; init; }
         public Guid? ReservationId { get; set; }
         public Ticket(Guid eventId, decimal price, string section, string row, string seatNumber)

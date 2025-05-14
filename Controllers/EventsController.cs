@@ -24,31 +24,45 @@ namespace TicketManagementSystem.Controllers
 
         // GET: api/Events
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Event>>> GetEvents()
+        public async Task<ActionResult<IEnumerable<EventDetails>>> GetEvents()
         {
-            return await _eventContext.Events.ToListAsync();
+            var events = await _eventContext.Events.ToListAsync();
+            var eventDetails = new List<EventDetails>();
+            foreach (var evt in events)
+            {
+                var tickets = await this.GetAllTicketsOfAnEvent((Guid)evt.Id!);
+                eventDetails.Add(new EventDetails(evt, tickets.Count));
+            }
+            return Ok(eventDetails);
         }
 
         // GET: api/Events/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Event>> GetEvent(Guid? id)
+        public async Task<ActionResult<EventDetails>> GetEvent(Guid? id)
         {
-            var @event = await _eventContext.Events.FindAsync(id);
+            var evt = await _eventContext.Events.FindAsync(id);
 
-            if (@event == null)
+            if (evt == null)
             {
                 return NotFound();
             }
 
-            return @event;
+            var tickets = await this.GetAllTicketsOfAnEvent((Guid)evt.Id!);
+            return Ok(new EventDetails(evt, tickets.Count));
         }
 
 
         // GET: api/Events/5/tickets
         [HttpGet("{id}/tickets")]
-        public async Task<ActionResult<IEnumerable<Ticket>>> GetTickets(Guid id)
+        public async Task<ActionResult<IList<Ticket>>> GetTickets(Guid id)
         {
-            return await _ticketContext.Tickets.Where(t => t.EventId == id).ToListAsync();
+            var tickets = await this.GetAllTicketsOfAnEvent(id);
+            return Ok(tickets);
+        }
+
+        private async Task<IList<Ticket>> GetAllTicketsOfAnEvent(Guid eventId)
+        {
+            return await _ticketContext.Tickets.Where(t => t.EventId == eventId).ToListAsync();
         }
     }
 }
