@@ -29,7 +29,7 @@ namespace TicketManagementSystem.Controllers
 
         // Get reservation details by ID
         [HttpPost("{id}/details")]
-        public async Task<ActionResult<Reservation>> GetReservationAsync([FromRoute] Guid id, [FromBody] Guid userId)
+        public async Task<ActionResult<ReservationDetails>> GetReservationAsync([FromRoute] Guid id, [FromBody] Guid userId)
         {
             if (id == Guid.Empty)
             {
@@ -46,7 +46,15 @@ namespace TicketManagementSystem.Controllers
                 return BadRequest($"User does not have access to the reservation.");
             }
 
-            return Ok(reservation);
+            List<Ticket> tickets = _ticketContext.Tickets.Where(t => reservation.TicketIds.Contains((Guid)t.Id)).ToList();
+            if (tickets.Count != reservation.TicketIds.Count)
+            {
+                return Problem("Some tickets in the reservation are not found.");
+            }
+
+            ReservationDetails details = new ReservationDetails(reservation, tickets);
+
+            return Ok(details);
         }
 
         // Reserve a list of tickets and return a reservation object

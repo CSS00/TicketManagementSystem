@@ -6,7 +6,7 @@ namespace TicketManagementSystem.Models
         public Guid EventId { get; set; }
         public Guid UserId { get; set; }
         public List<Guid> TicketIds { get; set; }
-        public DateTime ConfirmedAt { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
         public DateTime ReservedUntil { get; set; }
         public ReservationStatus Status { get; set; } = ReservationStatus.Active;
 
@@ -32,15 +32,25 @@ namespace TicketManagementSystem.Models
         Cancelled
     }
 
-    public class ReservationResponse
+    public class ReservationDetails
     {
         public Guid ReservationId { get; set; }
-        public Reservation Reservation { get; set; }
-        public ReservationStatus Status { get; set; } = ReservationStatus.Active;
+        public Guid EventId { get; set; }
+        public Guid UserId { get; set; }
+        public List<Ticket> Tickets { get; set; }
+        public DateTime? ConfirmedAt { get; set; }
+        public DateTime ReservedUntil { get; set; }
+        public ReservationStatus Status { get; set; }
 
-        public ReservationResponse(Reservation reservation)
+        public ReservationDetails(Reservation reservation, List<Ticket> tickets)
         {
-           
+            this.ReservationId = reservation.Id;
+            this.EventId = reservation.Id;
+            this.UserId = reservation.UserId;
+            this.Tickets = new List<Ticket>(tickets);
+            this.ConfirmedAt = reservation.ConfirmedAt;
+            this.ReservedUntil = reservation.ReservedUntil;
+            this.Status = reservation.Status;
         }
     }
 }
