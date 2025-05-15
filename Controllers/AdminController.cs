@@ -13,12 +13,15 @@ namespace TicketManagementSystem.Controllers
         private readonly EventContext _eventContext;
         private readonly TicketContext _ticketContext;
         private readonly UserContext _userContext;
+        private readonly ReservationContext _reservationContext;
 
-        public AdminController(EventContext eventContext, TicketContext ticketContext, UserContext userContext)
+
+        public AdminController(EventContext eventContext, TicketContext ticketContext, UserContext userContext, ReservationContext reservationContext)
         {
             _eventContext = eventContext;
             _ticketContext = ticketContext;
             _userContext = userContext;
+            _reservationContext = reservationContext;
         }
         
         // PUT: api/Events/5 -- Update an event
@@ -90,6 +93,20 @@ namespace TicketManagementSystem.Controllers
             if (@event == null)
             {
                 return NotFound();
+            }
+
+            List<Reservation> resvs = new List<Reservation>(_reservationContext.Reservations.Where(r => r.EventId == @event.Id));
+            foreach (Reservation resv in resvs)
+            {
+                // cannot delete the event if it is on an active/confirmed reservation
+                if (resv.Status == ReservationStatus.Active && !resv.Expired())
+                {
+                    return BadRequest("Cannot delete the event. There are active reservations on this event.");
+                }
+                if (resv.Status == ReservationStatus.Confirmed)
+                {
+                    return BadRequest("Cannot delete the event(booked). There are confirmed reservations on this event.");
+                }
             }
 
             _eventContext.Events.Remove(@event);
@@ -229,6 +246,22 @@ namespace TicketManagementSystem.Controllers
             if (ticket == null)
             {
                 return NotFound();
+            }
+            if (ticket.ReservationId != null)
+            {
+                // cannot delete the ticket if it is on an active/confirmed reservation
+                Reservation? resv = await _reservationContext.Reservations.FindAsync(ticket.ReservationId);
+                if (resv != null)
+                {
+                    if (resv.Status == ReservationStatus.Active && !resv.Expired())
+                    {
+                        return BadRequest("Cannot delete the ticket(reserved).");
+                    }
+                    if (resv.Status == ReservationStatus.Confirmed)
+                    {
+                        return BadRequest("Cannot delete the ticket(booked).");
+                    }
+                }
             }
 
             _ticketContext.Tickets.Remove(ticket);
